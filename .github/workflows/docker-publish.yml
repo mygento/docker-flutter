@@ -1,0 +1,77 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - '3.44'
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Image
+        run: docker build -t mygento/flutter:${{ matrix.version }} -f Dockerfile .
+      - name: Test Vault
+        run: docker run --rm mygento/flutter:${{ matrix.version }} vault -v
+      - name: Test PHP
+        run: docker run --rm mygento/flutter:${{ matrix.version }} php -v
+      - name: Test Composer
+        run: docker run --rm mygento/flutter:${{ matrix.version }} composer -V
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Push image LR
+        run: |
+          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}
+          export IMAGE_ID=ghcr.io/luckyraul/flutter:${{ matrix.version }}
+
+          # Change all uppercase to lowercase
+          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          echo $IMAGE_ID
+
+          docker tag $IMAGE_NAME $IMAGE_ID
+          docker push $IMAGE_ID
+      - name: Push image Mygento
+        run: |
+          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}
+          export IMAGE_ID=ghcr.io/mygento/flutter:${{ matrix.version }}
+
+          # Change all uppercase to lowercase
+          export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          echo $IMAGE_ID
+
+          docker tag $IMAGE_NAME $IMAGE_ID
+          docker push $IMAGE_ID
+  post_build:
+      needs: [build]
+      runs-on: ubuntu-latest
+      steps:
+        - name: Delete untagged GHCR LR
+          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+          with:
+            token: ${{ secrets.CR_PAT }}
+            repository_owner: luckyraul
+            repository: ''
+            owner_type: user
+            package_name: flutter
+        - name: Delete untagged GHCR Mygento
+          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+          with:
+            token: ${{ secrets.CR_PAT }}
+            repository_owner: ${{ github.repository_owner }}
+            repository: ''
+            owner_type: org
+            package_name: flutter
