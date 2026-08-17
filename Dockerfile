@@ -2,7 +2,7 @@ FROM ghcr.io/mygento/android:v36
 
 LABEL org.opencontainers.image.source=https://github.com/mygento/docker-flutter
 
-ENV FLUTTER_VERSION=3.44.9
+ENV FLUTTER_VERSION=3.47.0
 
 # Install dependencies and download/extract Flutter
 RUN apt-get -q update && apt-get install -qqy \
