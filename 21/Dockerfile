@@ -1,4 +1,4 @@
-FROM ghcr.io/mygento/android:v37
+FROM ghcr.io/mygento/android:v37-java21
 
 LABEL org.opencontainers.image.source=https://github.com/mygento/docker-flutter
 

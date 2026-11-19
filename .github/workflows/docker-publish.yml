@@ -10,19 +10,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         version:
           - '3.47'
+        java:
+          - 17
+          - 21
+          - 25
     steps:
       - uses: actions/checkout@v6
       - name: Build Image
-        run: docker build -t mygento/flutter:${{ matrix.version }} -f Dockerfile .
+        run: docker build -t mygento/flutter:${{ matrix.version }}-${{matrix.java}} -f ${{matrix.java}}/Dockerfile .
       - name: Test Vault
-        run: docker run --rm mygento/flutter:${{ matrix.version }} vault -v
+        run: docker run --rm mygento/flutter:${{ matrix.version }}-${{matrix.java}} vault -v
       - name: Test PHP
-        run: docker run --rm mygento/flutter:${{ matrix.version }} php -v
+        run: docker run --rm mygento/flutter:${{ matrix.version }}-${{matrix.java}} php -v
       - name: Test Composer
-        run: docker run --rm mygento/flutter:${{ matrix.version }} composer -V
+        run: docker run --rm mygento/flutter:${{ matrix.version }}-${{matrix.java}} composer -V
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -33,8 +38,8 @@ jobs:
 
       - name: Push image LR
         run: |
-          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}
-          export IMAGE_ID=ghcr.io/luckyraul/flutter:${{ matrix.version }}
+          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}-${{matrix.java}}
+          export IMAGE_ID=ghcr.io/luckyraul/flutter:${{ matrix.version }}-${{matrix.java}}
 
           # Change all uppercase to lowercase
           export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -45,8 +50,8 @@ jobs:
           docker push $IMAGE_ID
       - name: Push image Mygento
         run: |
-          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}
-          export IMAGE_ID=ghcr.io/mygento/flutter:${{ matrix.version }}
+          export IMAGE_NAME=mygento/flutter:${{ matrix.version }}-${{matrix.java}}
+          export IMAGE_ID=ghcr.io/mygento/flutter:${{ matrix.version }}-${{matrix.java}}
 
           # Change all uppercase to lowercase
           export IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -56,22 +61,22 @@ jobs:
           docker tag $IMAGE_NAME $IMAGE_ID
           docker push $IMAGE_ID
   post_build:
-      needs: [build]
-      runs-on: ubuntu-latest
-      steps:
-        - name: Delete untagged GHCR LR
-          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-          with:
-            token: ${{ secrets.CR_PAT }}
-            repository_owner: luckyraul
-            repository: ''
-            owner_type: user
-            package_name: flutter
-        - name: Delete untagged GHCR Mygento
-          uses: Chizkiyahu/delete-untagged-ghcr-action@v6
-          with:
-            token: ${{ secrets.CR_PAT }}
-            repository_owner: ${{ github.repository_owner }}
-            repository: ''
-            owner_type: org
-            package_name: flutter
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete untagged GHCR LR
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+          token: ${{ secrets.CR_PAT }}
+          repository_owner: luckyraul
+          repository: ''
+          owner_type: user
+          package_name: flutter
+      - name: Delete untagged GHCR Mygento
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+          token: ${{ secrets.CR_PAT }}
+          repository_owner: ${{ github.repository_owner }}
+          repository: ''
+          owner_type: org
+          package_name: flutter
